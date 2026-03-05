@@ -12,18 +12,30 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.Serializable
 import java.io.File
 import javax.inject.Inject
+import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.PolygonOptions
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import kotlinx.coroutines.delay
+
+
+
 
 @HiltViewModel
 class CatViewModel @Inject constructor(
-    private val repository: CatRepository   // ← 保持 private
+    val repository: CatRepository   // ← 因為 SettingScreen 需要，直接暴露
 ) : ViewModel() {
 	
 	// 新增這行，讓 SettingScreen 可以用
-    val repositoryPublic: CatRepository get() = repository   // 或者直接改名
+    //val repositoryPublic: CatRepository get() = repository   // 可刪除，直接用 repository 即可
 	
 	// 新增這兩個方法（之前我們提過）
     suspend fun getLocations(catName: String): List<CatLocation> =
@@ -33,9 +45,6 @@ class CatViewModel @Inject constructor(
         _selectedCat.value = null
         _locations.value = emptyList()
     }
-	
-	
-	val repository: CatRepository // 因為 SettingScreen 需要，直接暴露
 	
     val cats: StateFlow<List<Cat>> = repository.allCats.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
@@ -62,12 +71,16 @@ class CatViewModel @Inject constructor(
         viewModelScope.launch {
             val locs = repository.getLocations(catName)
             if (locs.size >= 3) {
-                val points = locs.map { LatLng(it.latitude, it.longitude) }
+                //val points = locs.map { LatLng(it.latitude, it.longitude) }
+                // 改指定 it 為 CatLocation 類型
+                val points = locs.map { loc: CatLocation -> LatLng(loc.latitude, loc.longitude) }
                 val polygon = map.addPolygon(
                     PolygonOptions()
                         .addAll(points)
                         .fillColor(0x44FF8800)   // 半透明橙色 mask
-                        .strokeColor(Color.Orange.toArgb())
+                        //.strokeColor(Color.Orange.toArgb())
+                        // 使用手動定義的橙色 (ARGB)
+                        .strokeColor(Color(0xFFFF8800).toArgb())
                         .strokeWidth(6f)
                 )
                 delay(6000L)

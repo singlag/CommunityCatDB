@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gary.communitycatdb.data.model.CatLocation
 import com.gary.communitycatdb.ui.components.CatEditDialog
@@ -13,8 +14,10 @@ import com.gary.communitycatdb.ui.viewmodel.CatViewModel
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
+import com.google.android.gms.maps.GoogleMap
 
-@OptIn(ExperimentalMaterial3Api::class)
+
+@OptIn(ExperimentalMaterial3Api::class, MapsComposeExperimentalApi::class)
 @Composable
 fun MapScreen(viewModel: CatViewModel = hiltViewModel()) {
     val cats by viewModel.cats.collectAsState()
@@ -26,7 +29,11 @@ fun MapScreen(viewModel: CatViewModel = hiltViewModel()) {
     var editingLatLng by remember { mutableStateOf<LatLng?>(null) }
     var showSettingScreen by remember { mutableStateOf(false) }
 
-    var googleMap by remember { mutableStateOf<GoogleMap?>(null) }
+    //var googleMap by remember { mutableStateOf<GoogleMap?>(null) }
+    var googleMap: GoogleMap? by remember { mutableStateOf<GoogleMap?>(null) }
+
+
+
 
     Scaffold(
         topBar = {
@@ -56,12 +63,19 @@ fun MapScreen(viewModel: CatViewModel = hiltViewModel()) {
                 cameraPositionState = rememberCameraPositionState {
                     position = CameraPosition.fromLatLngZoom(LatLng(22.3964, 114.1095), 11f) // 香港中心
                 },
-                onMapLoaded = { googleMap = it },
+                //onMapLoaded = { googleMap = it },
+                onMapLoaded = { /* 這裡現在不提供參數了 */ },
                 onMapLongClick = { latLng ->
                     editingLatLng = latLng
                     showEditDialog = true
                 }
             ) {
+
+                // 透過 MapEffect 獲取 GoogleMap 實例
+                MapEffect(Unit) { map ->
+                    googleMap = map
+                }
+
                 // 畫所有貓的位置 marker
                 cats.forEach { cat ->
                     val catLocs = remember(cat.name) { mutableStateOf<List<CatLocation>>(emptyList()) }

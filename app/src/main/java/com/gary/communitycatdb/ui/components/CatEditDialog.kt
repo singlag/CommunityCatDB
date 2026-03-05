@@ -47,24 +47,32 @@ fun CatEditDialog(
 
     // 表單狀態
     var catName by remember { mutableStateOf(initialCat?.name ?: "") }
-    var birthDate by remember { mutableStateOf(initialCat?.birthDate) }
+    var birthDate by remember { mutableStateOf<LocalDate?>(initialCat?.birthDate) }  // ← 加 <LocalDate?>
     var gender by remember { mutableStateOf(initialCat?.gender ?: "未知") }
     var isNeutered by remember { mutableStateOf(initialCat?.isNeutered ?: false) }
     var father by remember { mutableStateOf(initialCat?.father ?: "") }
     var mother by remember { mutableStateOf(initialCat?.mother ?: "") }
-    var offspring by remember { mutableStateOf(initialCat?.offspring?.toMutableList() ?: mutableListOf()) }
-    var favoriteFoods by remember { mutableStateOf(initialCat?.favoriteFoods?.toMutableList() ?: mutableListOf()) }
+    //var offspring by remember { mutableStateOf(initialCat?.offspring?.toMutableList() ?: mutableListOf()) }
+    //var offspring by remember { mutableStateListOf<String>(*initialCat?.offspring?.toTypedArray() ?: emptyArray()) }
+    val offspring = remember { mutableStateListOf<String>().apply { initialCat?.offspring?.let { addAll(it) } } }
+    //var favoriteFoods by remember { mutableStateOf(initialCat?.favoriteFoods?.toMutableList() ?: mutableListOf()) }
+    val favoriteFoods = remember { mutableStateListOf<String>().apply { initialCat?.favoriteFoods?.let { addAll(it) } } }
     var canTouch by remember { mutableStateOf(initialCat?.canTouch ?: false) }
     var canHandFeed by remember { mutableStateOf(initialCat?.canHandFeed ?: false) }
     var isMean by remember { mutableStateOf(initialCat?.isMean ?: false) }
     var isShy by remember { mutableStateOf(initialCat?.isShy ?: false) }
-    var photoPath by remember { mutableStateOf(initialCat?.photoPath) }
+    var photoPath by remember { mutableStateOf<String?>(initialCat?.photoPath) }  // ← 加 <String?>
+
 
     // Autocomplete 展開狀態
     var fatherExpanded by remember { mutableStateOf(false) }
     var motherExpanded by remember { mutableStateOf(false) }
     var foodExpanded by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
+
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = birthDate?.toEpochDays()?.times(86400000L)  // 轉成 millis
+    )
 
     // 照片選擇器
     val photoLauncher = rememberLauncherForActivityResult(
@@ -125,8 +133,12 @@ fun CatEditDialog(
                         isNeutered = existingCat.isNeutered
                         father = existingCat.father ?: ""
                         mother = existingCat.mother ?: ""
-                        offspring = existingCat.offspring.toMutableList()
-                        favoriteFoods = existingCat.favoriteFoods.toMutableList()
+                        //offspring = existingCat.offspring.toMutableList()
+                        //favoriteFoods = existingCat.favoriteFoods.toMutableList()
+                        offspring.clear()
+                        offspring.addAll(existingCat.offspring)
+                        favoriteFoods.clear()
+                        favoriteFoods.addAll(existingCat.favoriteFoods)
                         canTouch = existingCat.canTouch
                         canHandFeed = existingCat.canHandFeed
                         isMean = existingCat.isMean
@@ -145,7 +157,8 @@ fun CatEditDialog(
                     readOnly = true,
                     trailingIcon = {
                         IconButton(onClick = { showDatePicker = true }) {
-                            Icon(Icons.Default.Add, contentDescription = "選日期")
+                            //Icon(Icons.Default.Add, contentDescription = "選日期")
+                            Icon(imageVector = Icons.Default.Add, contentDescription = "選日期") // 確保參數名正確
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
@@ -195,7 +208,8 @@ fun CatEditDialog(
                         label = { Text("父親") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = fatherExpanded) },
                         modifier = Modifier
-                            .menuAnchor()
+                            //.menuAnchor()
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                             .fillMaxWidth()
                     )
                     ExposedDropdownMenu(
@@ -227,7 +241,8 @@ fun CatEditDialog(
                         label = { Text("母親") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = motherExpanded) },
                         modifier = Modifier
-                            .menuAnchor()
+                            //.menuAnchor()
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                             .fillMaxWidth()
                     )
                     ExposedDropdownMenu(
@@ -300,7 +315,8 @@ fun CatEditDialog(
                         onValueChange = {},
                         label = { Text("新增食物") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = foodExpanded) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                        //modifier = Modifier.menuAnchor().fillMaxWidth()
+                        modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth()
                     )
                     ExposedDropdownMenu(
                         expanded = foodExpanded,
@@ -445,19 +461,27 @@ fun CatEditDialog(
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
-                TextButton(onClick = { showDatePicker = false }) {
+                TextButton(
+                    onClick = {
+                        // 這裡取得選擇的日期並儲存
+                        val selectedMillis = datePickerState.selectedDateMillis
+                        birthDate = selectedMillis?.let {
+                            java.time.Instant.ofEpochMilli(it)
+                                .atZone(java.time.ZoneId.systemDefault())
+                                .toLocalDate()
+                                .toKotlinLocalDate()
+                        }
+                        showDatePicker = false
+                    }
+                ) {
                     Text("確定")
                 }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("取消") }
             }
         ) {
-            DatePicker(
-                state = rememberDatePickerState(),
-                onDateSelected = { millis ->
-                    birthDate = millis?.let {
-                        java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneId.systemDefault()).toLocalDate().toKotlinLocalDate()
-                    }
-                }
-            )
+            DatePicker(state = datePickerState)  // 記得先定義 datePickerState
         }
     }
 }

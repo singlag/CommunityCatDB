@@ -13,7 +13,10 @@ import kotlinx.serialization.Serializable
         parentColumns = ["name"],
         childColumns = ["catName"],
         onDelete = ForeignKey.CASCADE
-    )]
+    )],
+    // 解決警告：為外鍵 catName 建立索引
+    indices = [androidx.room.Index(value = ["catName"])]
+
 )
 data class CatLocation(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,

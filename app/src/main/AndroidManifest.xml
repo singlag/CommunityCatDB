@@ -14,9 +14,10 @@
         android:fullBackupContent="true">
 
         <!-- Google Maps API Key -->
+        <!-- 為了安全，不要直接把 Key 寫在代碼裡。在專案根目錄的 local.properties 檔案中加入-->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="YOUR_API_KEY_HERE" />   <!-- ← 改成你的 Key -->
+            android:value="${MAPS_API_KEY}" />
 
         <!-- FileProvider for Export -->
         <provider
