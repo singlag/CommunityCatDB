@@ -24,9 +24,9 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.PolygonOptions
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import com.gary.communitycatdb.data.model.CatWithLocations
 import kotlinx.coroutines.delay
-
-
+import kotlinx.coroutines.flow.map
 
 
 @HiltViewModel
@@ -34,10 +34,7 @@ class CatViewModel @Inject constructor(
     val repository: CatRepository   // ← 因為 SettingScreen 需要，直接暴露
 ) : ViewModel() {
 	
-	// 新增這行，讓 SettingScreen 可以用
-    //val repositoryPublic: CatRepository get() = repository   // 可刪除，直接用 repository 即可
-	
-	// 新增這兩個方法（之前我們提過）
+
     suspend fun getLocations(catName: String): List<CatLocation> =
         repository.getLocations(catName)
 
@@ -45,8 +42,26 @@ class CatViewModel @Inject constructor(
         _selectedCat.value = null
         _locations.value = emptyList()
     }
-	
-    val cats: StateFlow<List<Cat>> = repository.allCats.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+
+    //val cats: StateFlow<List<Cat>> = repository.allCats.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    // 替換原本的 val cats
+    val catsWithLocations: StateFlow<List<CatWithLocations>> =
+        repository.allCatsWithLocations.stateIn(
+            viewModelScope,
+            SharingStarted.Lazily,
+            emptyList()
+        )
+
+    // 保留原有的 cats：透過 map 從完整資訊中提取出 Cat 列表
+    // 這樣不需要額外去觀察資料庫，且能保證與 catsWithLocations 同步
+    val cats: StateFlow<List<Cat>> = catsWithLocations
+        .map { list -> list.map { it.cat } }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.Lazily,
+            emptyList()
+        )
 
     private val _selectedCat = MutableStateFlow<Cat?>(null)
     val selectedCat: StateFlow<Cat?> = _selectedCat.asStateFlow()
@@ -99,6 +114,13 @@ class CatViewModel @Inject constructor(
         }
     }
 
+    // 新增：刪除特定位置的函數
+    fun deleteLocationById(locationId: Long) {
+        viewModelScope.launch {
+            repository.deleteLocationById(locationId)
+        }
+    }
+
     // Global Search
     fun performSearch(query: String) {
         viewModelScope.launch {
@@ -117,29 +139,7 @@ class CatViewModel @Inject constructor(
         }
     }
 
-    // Export / Import
-    fun exportDatabase(context: Context) {
-        viewModelScope.launch {
-            val allData = cats.value.map { cat ->
-                val locs = repository.getLocations(cat.name)
-                ExportData(cat, locs)
-            }
-            val json = Json.encodeToString(allData)
-            val file = File(context.getExternalFilesDir(null), "community_cats_backup.json")
-            file.writeText(json)
-            // 分享 Intent (你可以在 UI 加按鈕呼叫)
-        }
-    }
 
-    fun importDatabase(json: String) {
-        viewModelScope.launch {
-            val data: List<ExportData> = Json.decodeFromString(json)
-            data.forEach { item ->
-                repository.saveCat(item.cat)
-                item.locations.forEach { repository.addLocation(it) }
-            }
-        }
-    }	
 }
 
 

@@ -25,6 +25,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.gary.communitycatdb.data.model.Cat
 import com.gary.communitycatdb.ui.viewmodel.CatViewModel
+import com.gary.communitycatdb.util.FileUtil
+import com.gary.communitycatdb.util.FileUtil.savePhotoToInternalStorage
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toLocalDate
@@ -79,7 +81,8 @@ fun CatEditDialog(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            photoPath = savePhotoToInternalStorage(context, it)
+            //photoPath = savePhotoToInternalStorage(context, it)
+            photoPath = FileUtil.savePhotoToInternalStorage(context, it)
         }
     }
 
@@ -486,17 +489,6 @@ fun CatEditDialog(
     }
 }
 
-// 內部儲存照片 helper
-private fun savePhotoToInternalStorage(context: Context, uri: Uri): String {
-    val fileName = "cat_${UUID.randomUUID()}.jpg"
-    val file = File(context.filesDir, fileName)
-    context.contentResolver.openInputStream(uri)?.use { input ->
-        FileOutputStream(file).use { output ->
-            input.copyTo(output)
-        }
-    }
-    return file.absolutePath
-}
 
 // Kotlinx-datetime 轉換 helper（如果需要）
 private fun java.time.LocalDate.toKotlinLocalDate(): LocalDate =

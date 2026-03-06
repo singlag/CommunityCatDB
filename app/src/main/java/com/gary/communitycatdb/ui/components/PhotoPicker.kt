@@ -19,9 +19,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.gary.communitycatdb.util.FileUtil
 import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
+import com.gary.communitycatdb.util.FileUtil.savePhotoToInternalStorage
 
 /**
  * 可重用的照片選擇器
@@ -42,7 +44,8 @@ fun PhotoPicker(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            val savedPath = savePhotoToInternalStorage(context, it)
+            val savedPath = FileUtil.savePhotoToInternalStorage(context, it)
+            //val savedPath = savePhotoToInternalStorage(context, it)
             onPhotoSelected(savedPath)
         }
     }
@@ -108,15 +111,3 @@ fun PhotoPicker(
     }
 }
 
-// 儲存照片到 App 內部儲存空間（永久保留）
-private fun savePhotoToInternalStorage(context: Context, uri: Uri): String {
-    val fileName = "cat_photo_${UUID.randomUUID()}.jpg"
-    val file = File(context.filesDir, fileName)
-
-    context.contentResolver.openInputStream(uri)?.use { input ->
-        FileOutputStream(file).use { output ->
-            input.copyTo(output)
-        }
-    }
-    return file.absolutePath
-}

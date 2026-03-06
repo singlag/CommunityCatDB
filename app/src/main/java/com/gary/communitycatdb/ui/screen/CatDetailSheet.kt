@@ -16,7 +16,9 @@ import com.gary.communitycatdb.data.model.CatLocation
 fun CatDetailSheet(
     cat: Cat,
     locations: List<CatLocation>,
-    onEdit: () -> Unit
+    currentLocation: CatLocation?, // 新增：目前點擊的那個特定位置
+    onEdit: () -> Unit,
+    onDeleteLocation: (Long) -> Unit // 新增：刪除回呼
 ) {
     Column(
         modifier = Modifier
@@ -54,6 +56,22 @@ fun CatDetailSheet(
         Button(onClick = onEdit, modifier = Modifier.fillMaxWidth()) {
             Text("編輯貓隻資料")
         }
+
+
+        // --- 新增：移除此位置按鈕 ---
+        if (currentLocation != null) {
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = { onDeleteLocation(currentLocation.id) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                )
+            ) {
+                Text("移除此地圖標記 (Marker)")
+            }
+        }
+
     }
 }
 

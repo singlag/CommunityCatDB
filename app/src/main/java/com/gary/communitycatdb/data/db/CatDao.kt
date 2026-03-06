@@ -3,6 +3,7 @@ package com.gary.communitycatdb.data.db
 import androidx.room.*
 import com.gary.communitycatdb.data.model.Cat
 import com.gary.communitycatdb.data.model.CatLocation
+import com.gary.communitycatdb.data.model.CatWithLocations
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -27,4 +28,15 @@ interface CatDao {
 
     @Query("SELECT name FROM cats WHERE favoriteFoods LIKE '%' || :food || '%'")
     suspend fun getCatsByFavoriteFood(food: String): List<String>
+
+    @Query("DELETE FROM cat_locations WHERE catName = :catName")
+    suspend fun deleteLocationsByCatName(catName: String)
+
+    @Transaction
+    @Query("SELECT * FROM cats")
+    fun getAllCatsWithLocations(): kotlinx.coroutines.flow.Flow<List<CatWithLocations>>
+
+    @Query("DELETE FROM cat_locations WHERE id = :locationId")
+    suspend fun deleteLocationById(locationId: Long)
+
 }

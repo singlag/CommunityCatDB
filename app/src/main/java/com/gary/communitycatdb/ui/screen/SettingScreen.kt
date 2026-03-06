@@ -12,9 +12,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import android.content.Intent
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gary.communitycatdb.data.model.CatLocation
 import com.gary.communitycatdb.ui.viewmodel.CatViewModel
 import com.gary.communitycatdb.util.ExportImportUtil
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.MapEffect
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.MarkerState.Companion.invoke
 import kotlinx.coroutines.launch
+import kotlin.collections.forEach
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,32 +85,44 @@ fun SettingScreen(
             Button(
                 onClick = {
                     coroutineScope.launch {
-                        val uri = ExportImportUtil.exportDatabase(context, cats, viewModel.repository)
-                        uri?.let {
-                            val intent = ExportImportUtil.createShareIntent(context, it)
-                            context.startActivity(Intent.createChooser(intent, "分享備份檔案"))
-                        } ?: run {
-                            Toast.makeText(context, "匯出失敗", Toast.LENGTH_SHORT).show()
+                        // 1. 產生備份檔案 (現在直接回傳 File? 而不是 Uri?)
+                        val backupFile = ExportImportUtil.exportDatabase(context, cats, viewModel.repository)
+
+                        if (backupFile != null && backupFile.exists()) {
+                            // 2. 直接使用回傳的 File 物件進行移動，不再需要 listFiles() 去搜尋
+                            val savedFile = ExportImportUtil.moveFileToDownloads(context, backupFile)
+
+                            if (savedFile != null) {
+                                Toast.makeText(
+                                    context,
+                                    "備份已存至 Downloads\n檔名：${savedFile.name}",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            } else {
+                                Toast.makeText(context, "移動檔案至 Downloads 失敗", Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            Toast.makeText(context, "產生 ZIP 備份檔失敗", Toast.LENGTH_SHORT).show()
                         }
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("匯出資料庫（JSON）")
+                Text("匯出資料庫（ZIP）")
             }
 
             // Import 按鈕
             Button(
-                onClick = { importLauncher.launch("application/json") },
+                onClick = { importLauncher.launch("application/zip") },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("匯入資料庫（選擇 JSON 檔案）")
+                Text("匯入資料庫（選擇 ZIP 檔案）")
             }
 
             Spacer(Modifier.weight(1f))
 
             Text(
-                text = "備份會包含所有貓隻資料、多個位置、照片路徑等\n匯入時會自動覆蓋同名貓隻",
+                text = "備份會包含所有貓隻資料、多個位置、照片路徑等\n匯入時會自動覆蓋同名貓隻\n＊＊＊　為保障社區貓安全，請勿公開分享社區貓資料　＊＊＊",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

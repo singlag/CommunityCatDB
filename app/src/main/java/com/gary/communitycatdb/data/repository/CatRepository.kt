@@ -1,5 +1,6 @@
 package com.gary.communitycatdb.data.repository
 
+import androidx.room.Transaction
 import com.gary.communitycatdb.data.db.CatDatabase
 import com.gary.communitycatdb.data.model.Cat
 import com.gary.communitycatdb.data.model.CatLocation
@@ -10,6 +11,8 @@ import javax.inject.Singleton
 @Singleton
 class CatRepository @Inject constructor(private val db: CatDatabase) {
     val allCats: Flow<List<Cat>> = db.catDao().getAllCats()
+    val allCatsWithLocations = db.catDao().getAllCatsWithLocations()
+
 
     suspend fun getCat(name: String): Cat? = db.catDao().getCatByName(name)
     suspend fun saveCat(cat: Cat) = db.catDao().insertCat(cat)
@@ -17,4 +20,13 @@ class CatRepository @Inject constructor(private val db: CatDatabase) {
     suspend fun addLocation(location: CatLocation) = db.catDao().insertLocation(location)
     suspend fun getAllFoods(): List<String> = db.catDao().getAllFoodsRaw().flatMap { it.split(",") }.distinct()
     suspend fun getCatsByFood(food: String): List<String> = db.catDao().getCatsByFavoriteFood(food)
+
+    // 新增：供匯入時使用的刪除位置方法
+    @Transaction
+    suspend fun deleteLocationsByCatName(catName: String) {
+        db.catDao().deleteLocationsByCatName(catName)
+    }
+
+    suspend fun deleteLocationById(id: Long) = db.catDao().deleteLocationById(id)
+
 }
